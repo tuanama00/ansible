@@ -4,8 +4,8 @@
   become: yes
   #gather_facts: false
   vars:
-    dest_dir: "/home/jaraujo/"
-    extracted_dir: "/home/jaraujo/extracted/"
+    dest_dir: "/home/semaphore/files"
+   # extracted_dir: "/home/jaraujo/extracted/"
 
   tasks:
     - name: Generate sos report
@@ -96,13 +96,13 @@
         msg: "file is invalid"
       when: actual_sha256.stdout.split()[0] != expected_sha256
       
-    - name: Extract the report file (.tar.xz) to the specified directory
-      delegate_to: localhost
-      unarchive:
-        src: "{{ dest_dir }}/{{ sos_report_file | basename }}"
-        dest: "{{ extracted_dir }}"
-        remote_src: no
-      when: actual_sha256.stdout.split()[0] == expected_sha256
+  #  - name: Extract the report file (.tar.xz) to the specified directory
+  #    delegate_to: localhost
+  #    unarchive:
+  #      src: "{{ dest_dir }}/{{ sos_report_file | basename }}"
+  #      dest: "{{ extracted_dir }}"
+  #      remote_src: no
+  #    when: actual_sha256.stdout.split()[0] == expected_sha256
 
     - name: Delete the checksum file from the remote server
       file:
