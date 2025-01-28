@@ -1,0 +1,117 @@
+---
+- name: Generar, extraer y verificar sos report
+  hosts: all
+  become: yes
+  vars:
+    dest_dir: "/home/jaraujo/"
+    extracted_dir: "/home/jaraujo/extracted/"
+
+  tasks:
+    - name: Generate sos report
+      command: sos report --batch
+      register: sos_output
+
+    - name: Validate if report is generated
+      meta: end_play
+      when: sos_output.failed
+
+    - name: File path generate 
+      set_fact:
+        sos_report_file: "{{ sos_output.stdout | regex_search('saved in:\\n\\s*(/\\S+\\.tar\\.xz)', '\\1', multiline=True) | trim | replace('[', '') | replace(']', '') | replace(\"'\", '') }}"
+
+    - name: Validate report file .tar.xz 
+      stat:
+        path: "{{ sos_report_file }}"
+      register: sos_file_stat
+
+  #  - name: Show generate so report file in remote server
+  #    debug:
+  #      msg: "File generated: {{ sos_report_file }}"
+  #    when: sos_file_stat.stat.exists
+
+    - name: Locate checksum file for verify integrity downloades file
+      set_fact:
+        sha256_file: "{{ sos_report_file }}.sha256"
+
+   # - name: Mostrar mensaje si el archivo fue generado
+   #   debug:
+   #     msg: "File generated: {{ sha256_file }}"
+   #   when: sos_file_stat.stat.exists    
+
+    - name: Validate if sha256  file existe
+      stat:
+        path: "{{ sha256_file }}"
+      register: sha256_file_stat
+      when: sos_file_stat.stat.exists
+
+    - name: Downlaod so report file generate
+      fetch:
+        src: "{{ sos_report_file }}"
+        dest: "{{ dest_dir }}"
+        flat: yes
+      when: sos_file_stat.stat.exists
+
+   # - name: Mostrar mensaje si el archivo fue generado
+   #   debug:
+   #     msg: "File check: {{ dest_dir }}{{ sha256_file | basename }}"
+
+    - name: Read file .sha256 for validate file
+      slurp:
+        src: "{{ sha256_file }}"
+      register: sha256_file_content
+      when: sha256_file_stat is defined and sha256_file_stat.stat.exists
+
+    - name: Decode sha256 file 
+      set_fact:
+        expected_sha256: "{{ sha256_file_content.content | b64decode | trim }}"
+      when: sha256_file_content is defined
+
+  #  - name: Merererererer
+  #    debug:
+  #      msg: "File check: {{ dest_dir }}{{ sos_report_file | basename }}"
+        
+        
+    - name: Calculate hash of downlaod file
+      command: "sha256sum {{ dest_dir }}/{{ sos_report_file | basename }}"
+      register: actual_sha256
+      when: expected_sha256 is defined
+      delegate_to: localhost
+
+  #  - name: Mostrar hash calculado del archivo comprimido
+  #    debug: 
+  #      msg: "Hash calculado: {{ actual_sha256.stdout.split()[0] }}"
+
+  #  - name: Mostrar hash esperado del archivo .sha256
+  #    debug: 
+  #      msg: "Hash esperado: {{ expected_sha256 }}"
+
+    - name: Validate integrity of file 
+      debug:
+        msg: "file is valid"
+      when: actual_sha256.stdout.split()[0] == expected_sha256
+
+    - name: Show error if the file hash does not match
+      debug:
+        msg: "file is invalid"
+      when: actual_sha256.stdout.split()[0] != expected_sha256
+      
+    - name: Extract the report file (.tar.xz) to the specified directory
+      delegate_to: localhost
+      unarchive:
+        src: "{{ dest_dir }}/{{ sos_report_file | basename }}"
+        dest: "{{ extracted_dir }}"
+        remote_src: no
+      when: actual_sha256.stdout.split()[0] == expected_sha256
+
+    - name: Delete the checksum file from the remote server
+      file:
+        path: "{{ sha256_file }}"
+        state: absent
+      when: sha256_file_stat.stat.exists
+   
+    - name: Delete the SOS report file from the remote server
+      file:
+        path: "{{ sos_report_file }}"
+        state: absent
+      when: sos_file_stat.stat.exists
+
