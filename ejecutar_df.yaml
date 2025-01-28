@@ -1,0 +1,14 @@
+---
+- name: df command 
+  hosts: all
+  gather_facts: yes
+  vars:
+
+  tasks:
+    - name: Run  df command 
+      command: df -h
+      register: dd_output
+
+    - name: show output command df 
+      debug:
+        msg: "{{ dd_output.stdout }}"
