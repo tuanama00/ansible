@@ -25,19 +25,19 @@
         path: "{{ sos_report_file }}"
       register: sos_file_stat
 
-  #  - name: Show generate so report file in remote server
-  #    debug:
-  #      msg: "File generated: {{ sos_report_file }}"
-  #    when: sos_file_stat.stat.exists
+    - name: Show generate so report file in remote server
+      debug:
+        msg: "File generated: {{ sos_report_file }}"
+      when: sos_file_stat.stat.exists
 
     - name: Locate checksum file for verify integrity downloades file
       set_fact:
         sha256_file: "{{ sos_report_file }}.sha256"
 
-   # - name: Mostrar mensaje si el archivo fue generado
-   #   debug:
-   #     msg: "File generated: {{ sha256_file }}"
-   #   when: sos_file_stat.stat.exists    
+    - name: Mostrar mensaje si el archivo fue generado
+      debug:
+        msg: "File generated: {{ sha256_file }}"
+      when: sos_file_stat.stat.exists    
 
     - name: Validate if sha256  file existe
       stat:
@@ -52,9 +52,9 @@
         flat: yes
       when: sos_file_stat.stat.exists
 
-   # - name: Mostrar mensaje si el archivo fue generado
-   #   debug:
-   #     msg: "File check: {{ dest_dir }}{{ sha256_file | basename }}"
+    - name: Mostrar mensaje si el archivo fue generado
+      debug:
+        msg: "File check: {{ dest_dir }}{{ sha256_file | basename }}"
 
     - name: Read file .sha256 for validate file
       slurp:
@@ -67,9 +67,9 @@
         expected_sha256: "{{ sha256_file_content.content | b64decode | trim }}"
       when: sha256_file_content is defined
 
-  #  - name: Merererererer
-  #    debug:
-  #      msg: "File check: {{ dest_dir }}{{ sos_report_file | basename }}"
+    - name: Merererererer
+      debug:
+        msg: "File check: {{ dest_dir }}{{ sos_report_file | basename }}"
         
         
     - name: Calculate hash of downlaod file
@@ -78,13 +78,13 @@
       when: expected_sha256 is defined
       delegate_to: localhost
 
-  #  - name: Mostrar hash calculado del archivo comprimido
-  #    debug: 
-  #      msg: "Hash calculado: {{ actual_sha256.stdout.split()[0] }}"
+    - name: Mostrar hash calculado del archivo comprimido
+      debug: 
+        msg: "Hash calculado: {{ actual_sha256.stdout.split()[0] }}"
 
-  #  - name: Mostrar hash esperado del archivo .sha256
-  #    debug: 
-  #      msg: "Hash esperado: {{ expected_sha256 }}"
+    - name: Mostrar hash esperado del archivo .sha256
+      debug: 
+        msg: "Hash esperado: {{ expected_sha256 }}"
 
     - name: Validate integrity of file 
       debug:
