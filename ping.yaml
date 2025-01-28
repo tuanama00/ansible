@@ -1,0 +1,8 @@
+---
+- name: Ping reply servers CEM
+  hosts: all
+  connection: local
+
+  tasks:
+    - name: check server ping reply
+      ansible.builtin.ping:
