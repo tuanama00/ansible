@@ -1,0 +1,77 @@
+- name: Upgrade kernel on remote hosts
+  hosts: wom_bog_worker22
+  vars:
+    kernel_version: "4.18.0-553.34.1.el8_10.x86_64"
+    kernel_path: "/home/jaraujo/Ansible/files/kernel"
+    kernel_files:
+      - "kernel-core-4.18.0-553.34.1.el8_10.x86_64.rpm"
+      - "kernel-modules-4.18.0-553.34.1.el8_10.x86_64.rpm"
+
+  tasks:
+    - name: Gather facts
+      ansible.builtin.setup:
+
+    - name: Check current kernel version
+      command: uname -r
+      register: current_kernel
+
+    - name: Show current kernel version
+      debug:
+        msg: "Current kernel version: {{ current_kernel.stdout }}"
+
+    - name: Skip kernel update if the kernel is already updated
+      debug:
+        msg: "Kernel is already updated to version {{ kernel_version }}. Skipping tasks."
+      when: current_kernel.stdout == kernel_version
+
+    - name: Verify kernel RPM files exist on the local machine
+      stat:
+        path: "{{ kernel_path }}/{{ item }}"
+      with_items: "{{ kernel_files }}"
+      register: kernel_files_status
+      when: current_kernel.stdout != kernel_version
+
+    - name: Transfer kernel RPM files to remote hosts
+      copy:
+        src: "{{ kernel_path }}/{{ item }}"
+        dest: "/tmp/{{ item }}"
+        mode: '0644'
+      loop: "{{ kernel_files }}"
+      when: current_kernel.stdout != kernel_version
+
+    - name: Install the new kernel RPMs
+      command: yum localinstall -y /tmp/{{ item }}
+      loop: "{{ kernel_files }}"
+      when: current_kernel.stdout != kernel_version
+
+    - name: Verify kernel-core package installation
+      command: rpm -q kernel-core
+      register: kernel_core_installed
+      failed_when: "'kernel-core' not in kernel_core_installed.stdout"
+      when: current_kernel.stdout != kernel_version
+
+    - name: Regenerate initramfs for the new kernel
+      command: dracut --force /boot/initramfs-{{ kernel_version }}.img {{ kernel_version }}
+      when: current_kernel.stdout != kernel_version
+
+
+
+    - name: Set the new kernel as the default
+      command: grubby --set-default=/boot/vmlinuz-{{ kernel_version }}
+      when: current_kernel.stdout != kernel_version
+
+    - name: Reboot the system to apply the kernel update
+      reboot:
+        reboot_timeout: 720
+        test_command: uname -r
+      when: current_kernel.stdout != kernel_version
+
+    - name: Confirm that the kernel has been updated
+      command: uname -r
+      register: updated_kernel
+      changed_when: false
+      when: current_kernel.stdout != kernel_version
+
+    - name: Show updated kernel version
+      debug:
+        msg: "Updated kernel version: {{ updated_kernel.stdout }}"
