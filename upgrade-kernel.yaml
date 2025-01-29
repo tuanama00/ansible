@@ -1,5 +1,5 @@
 - name: Upgrade kernel on remote hosts
-  hosts: wom_bog_worker22
+  hosts: all
   vars:
     kernel_version: "4.18.0-553.34.1.el8_10.x86_64"
     kernel_path: "/home/jaraujo/Ansible/files/kernel"
