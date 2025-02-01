@@ -1,7 +1,9 @@
 ---
 - name: Ping reply servers CEM
   hosts: all
-  connection: local
+  #connection: local
+  gather_facts: no
+  vars:
 
   tasks:
     - name: check server ping reply
