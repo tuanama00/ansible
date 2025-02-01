@@ -11,6 +11,7 @@
     - name: Generate sos report
       command: sos report --batch
       register: sos_output
+      become: yes
 
     - name: Validate if report is generated
       meta: end_play
